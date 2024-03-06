@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+
+	"github.com/go-chi/chi/v5"
 )
 
 type apiConfig struct {
@@ -27,17 +29,26 @@ func main() {
 	const filePathRoot = "."
 	const port = "8080"
 
-	apiConf := apiConfig{}
+	apiConf := apiConfig{fileServerHits: 0}
+	r := chi.NewRouter()
 
-	mux := http.NewServeMux()
-	mux.Handle("/app/", apiConf.middleWareMetricIncrement(
-		http.StripPrefix("/app/", http.FileServer(http.Dir(filePathRoot)))))
+	fsHandler := apiConf.middleWareMetricIncrement(http.StripPrefix("/app", http.FileServer(http.Dir(filePathRoot))))
 
-	mux.HandleFunc("/healthz", handlerReadiness)
-	mux.HandleFunc("/metrics", apiConf.handlerMetrics)
-	mux.HandleFunc("/reset", apiConf.handlerReset)
+	r.Handle("/app", fsHandler)
+	r.Handle("/app/*", fsHandler)
+	r.Get("/healthz", handlerReadiness)
+	r.Get("/metrics", apiConf.handlerMetrics)
+	r.Get("/reset", apiConf.handlerReset)
 
-	corsMux := middlewareCors(mux)
+	// mux := http.NewServeMux()
+	// mux.Handle("/app/", apiConf.middleWareMetricIncrement(
+	// 	http.StripPrefix("/app/", http.FileServer(http.Dir(filePathRoot)))))
+	// mux.HandleFunc("/healthz", handlerReadiness)
+	// mux.HandleFunc("/metrics", apiConf.handlerMetrics)
+	// mux.HandleFunc("/reset", apiConf.handlerReset)
+	// corsMux := middlewareCors(mux)
+
+	corsMux := middlewareCors(r)
 
 	var server = &http.Server{
 		Addr:    ":" + port,
