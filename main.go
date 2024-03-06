@@ -13,9 +13,18 @@ type apiConfig struct {
 }
 
 func (config *apiConfig) handlerMetrics(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Add("Content-Type", "text/html")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(fmt.Sprintf("Hits: %d", config.fileServerHits)))
+	w.Write([]byte(fmt.Sprintf(`
+	<html>
+
+	<body>
+		<h1>Welcome, Chirpy Admin</h1>
+		<p>Chirpy has been visited %d times!</p>
+	</body>
+	
+	</html>	
+	`, config.fileServerHits)))
 }
 
 func (config *apiConfig) middleWareMetricIncrement(next http.Handler) http.Handler {
@@ -36,9 +45,10 @@ func main() {
 
 	r.Handle("/app", fsHandler)
 	r.Handle("/app/*", fsHandler)
-	r.Get("/healthz", handlerReadiness)
-	r.Get("/metrics", apiConf.handlerMetrics)
-	r.Get("/reset", apiConf.handlerReset)
+	r.Mount("/api", apiRouter(&apiConf))
+	adminRoute := chi.NewRouter()
+	adminRoute.Get("/metrics", apiConf.handlerMetrics)
+	r.Mount("/admin", adminRoute)
 
 	// mux := http.NewServeMux()
 	// mux.Handle("/app/", apiConf.middleWareMetricIncrement(
@@ -63,4 +73,11 @@ func handlerReadiness(w http.ResponseWriter, req *http.Request) {
 	w.Header().Add("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(http.StatusText(http.StatusOK)))
+}
+
+func apiRouter(apiConf *apiConfig) http.Handler {
+	r := chi.NewRouter()
+	r.Get("/healthz", handlerReadiness)
+	r.Get("/reset", apiConf.handlerReset)
+	return r
 }
