@@ -60,6 +60,7 @@ func apiRouter(apiConf *apiConfig) http.Handler {
 	r.Get("/healthz", handlerReadiness)
 	r.Get("/reset", apiConf.handlerReset)
 	r.Post("/users", apiConf.handlerCreateUser)
+	r.Post("/login", apiConf.handlerLogin)
 	r.Route("/chirps", func(r chi.Router) {
 		r.Get("/", apiConf.handlerChirpsRetrieve)
 		r.Post("/", apiConf.handlerChirp)

@@ -3,8 +3,11 @@ package database
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"sync"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 type DB struct {
@@ -23,8 +26,9 @@ type DBStructure struct {
 }
 
 type User struct {
-	ID    int    `json:"id"`
-	Email string `json:"email"`
+	ID       int    `json:"id"`
+	Email    string `json:"email"`
+	Password string `json"password"`
 }
 
 // NewDB creates a new database connection
@@ -61,16 +65,31 @@ func (db *DB) CreateChirp(body string) (Chirp, error) {
 }
 
 // Create user creates a new user and saves it to disk
-func (db *DB) CreateUser(body string) (User, error) {
+func (db *DB) CreateUser(email, password string) (User, error) {
 	dbStructure, err := db.loadDB()
 	if err != nil {
 		return User{}, err
 	}
 
+	fmt.Println("ha")
+
+	for _, val := range dbStructure.Users {
+		if email == val.Email {
+			return User{}, errors.New("Duplicate email address")
+		}
+	}
+	fmt.Println("hello")
 	id := len(dbStructure.Users) + 1
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 10)
+
+	if err != nil {
+		return User{}, err
+	}
+
 	user := User{
-		ID:    id,
-		Email: body,
+		ID:       id,
+		Email:    email,
+		Password: string(hashedPassword),
 	}
 	dbStructure.Users[id] = user
 
@@ -80,6 +99,27 @@ func (db *DB) CreateUser(body string) (User, error) {
 	}
 
 	return user, nil
+}
+
+func (db *DB) LoginUser(email, password string) (User, error) {
+	dbStructure, err := db.loadDB()
+	if err != nil {
+		return User{}, err
+	}
+
+	loggedUser := User{}
+	for _, user := range dbStructure.Users {
+		if user.Email == email {
+			err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
+			if err != nil {
+				return User{}, err
+			} else {
+				loggedUser = user
+				break
+			}
+		}
+	}
+	return loggedUser, nil
 }
 
 // GetChirps returns all chirps in the database
