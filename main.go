@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"net/http"
-	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/vnsonvo/chirpy-go/internal/database"
@@ -56,27 +55,11 @@ func main() {
 	log.Fatal(server.ListenAndServe())
 }
 
-func sanitizeFunc(val string) string {
-	var profane = map[string]bool{
-		"kerfuffle": true,
-		"sharbert":  true,
-		"fornax":    true,
-	}
-
-	str := strings.Split(val, " ")
-	for i, v := range str {
-		key := strings.ToLower(v)
-		if _, ok := profane[key]; ok {
-			str[i] = "****"
-		}
-	}
-	return strings.Join(str, " ")
-}
-
 func apiRouter(apiConf *apiConfig) http.Handler {
 	r := chi.NewRouter()
 	r.Get("/healthz", handlerReadiness)
 	r.Get("/reset", apiConf.handlerReset)
+	r.Post("/users", apiConf.handlerCreateUser)
 	r.Route("/chirps", func(r chi.Router) {
 		r.Get("/", apiConf.handlerChirpsRetrieve)
 		r.Post("/", apiConf.handlerChirp)

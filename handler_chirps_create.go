@@ -46,6 +46,23 @@ func (apiConf *apiConfig) handlerChirp(w http.ResponseWriter, req *http.Request)
 
 }
 
+func sanitizeFunc(val string) string {
+	var profane = map[string]bool{
+		"kerfuffle": true,
+		"sharbert":  true,
+		"fornax":    true,
+	}
+
+	str := strings.Split(val, " ")
+	for i, v := range str {
+		key := strings.ToLower(v)
+		if _, ok := profane[key]; ok {
+			str[i] = "****"
+		}
+	}
+	return strings.Join(str, " ")
+}
+
 func validateChirp(body string) (string, error) {
 	const maxChirpLength = 140
 	if len(body) > maxChirpLength {
