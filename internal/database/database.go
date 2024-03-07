@@ -71,14 +71,12 @@ func (db *DB) CreateUser(email, password string) (User, error) {
 		return User{}, err
 	}
 
-	fmt.Println("ha")
-
 	for _, val := range dbStructure.Users {
 		if email == val.Email {
 			return User{}, errors.New("Duplicate email address")
 		}
 	}
-	fmt.Println("hello")
+
 	id := len(dbStructure.Users) + 1
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 10)
 
@@ -98,6 +96,35 @@ func (db *DB) CreateUser(email, password string) (User, error) {
 		return User{}, err
 	}
 
+	return user, nil
+}
+
+func (db *DB) UpdateUser(id int, email, password string) (User, error) {
+	dbStructure, err := db.loadDB()
+	if err != nil {
+		return User{}, err
+	}
+
+	user, ok := dbStructure.Users[id]
+	if !ok {
+		return User{}, fmt.Errorf("user not exist")
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 10)
+
+	if err != nil {
+		return User{}, err
+	}
+	user.Email = email
+	user.Password = string(hashedPassword)
+
+	dbStructure.Users[id] = user
+
+	err = db.writeDB(dbStructure)
+
+	if err != nil {
+		return User{}, err
+	}
 	return user, nil
 }
 
