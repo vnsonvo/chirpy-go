@@ -73,7 +73,8 @@ func (apiConf *apiConfig) HandlerUpdateUser(w http.ResponseWriter, req *http.Req
 	}
 
 	respondWithJSON(w, http.StatusOK, User{
-		Email: user.Email,
-		ID:    user.ID,
+		Email:       user.Email,
+		ID:          user.ID,
+		IsChirpyRed: user.IsChirpyRed,
 	})
 }

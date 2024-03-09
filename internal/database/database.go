@@ -28,9 +28,10 @@ type DBStructure struct {
 }
 
 type User struct {
-	ID       int    `json:"id"`
-	Email    string `json:"email"`
-	Password string `json"password"`
+	ID          int    `json:"id"`
+	Email       string `json:"email"`
+	Password    string `json"password"`
+	IsChirpyRed bool   `json:"is_chirpy_red"`
 }
 
 // NewDB creates a new database connection
@@ -88,9 +89,10 @@ func (db *DB) CreateUser(email, password string) (User, error) {
 	}
 
 	user := User{
-		ID:       id,
-		Email:    email,
-		Password: string(hashedPassword),
+		ID:          id,
+		Email:       email,
+		Password:    string(hashedPassword),
+		IsChirpyRed: false,
 	}
 	dbStructure.Users[id] = user
 
@@ -100,6 +102,34 @@ func (db *DB) CreateUser(email, password string) (User, error) {
 	}
 
 	return user, nil
+}
+
+func (db *DB) UpgradeUser(userId int) error {
+	dbStructure, err := db.loadDB()
+	if err != nil {
+		return err
+	}
+
+	foundUser, found := dbStructure.Users[userId]
+	if !found {
+		return fmt.Errorf("not found")
+	}
+
+	user := User{
+		ID:          foundUser.ID,
+		Email:       foundUser.Email,
+		Password:    foundUser.Password,
+		IsChirpyRed: true,
+	}
+
+	dbStructure.Users[userId] = user
+
+	err = db.writeDB(dbStructure)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (db *DB) UpdateUser(id int, email, password string) (User, error) {
@@ -177,6 +207,23 @@ func (db *DB) GetChirp(id int) (Chirp, error) {
 	}
 
 	return chirp, nil
+}
+
+func (db *DB) DeleteChirp(authorId, id int) error {
+	dbStructure, err := db.loadDB()
+	if err != nil {
+		return err
+	}
+	chirp, ok := dbStructure.Chirps[id]
+	if !ok {
+		return fmt.Errorf("wrong chirp id")
+	}
+	if chirp.AuthorID != authorId {
+		return fmt.Errorf("author doesnt have permission to delete this chirp")
+	}
+
+	delete(dbStructure.Chirps, id)
+	return nil
 }
 
 func (db *DB) createDB() error {

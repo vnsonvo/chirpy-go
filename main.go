@@ -74,11 +74,13 @@ func apiRouter(apiConf *apiConfig) http.Handler {
 	r.Post("/login", apiConf.handlerLogin)
 	r.Post("/refresh", apiConf.handlerRefreshToken)
 	r.Post("/revoke", apiConf.handlerRevoke)
+	r.Post("/polka/webhooks", apiConf.handlerChirpWebhook)
 	r.Route("/chirps", func(r chi.Router) {
 		r.Get("/", apiConf.handlerChirpsRetrieve)
 		r.Post("/", apiConf.handlerChirp)
 		r.Route("/{chirpID}", func(r chi.Router) {
 			r.Get("/", apiConf.handlerChirpsGet)
+			r.Delete("/", apiConf.handlerDeleteChirp)
 		})
 	})
 
