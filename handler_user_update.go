@@ -35,6 +35,15 @@ func (apiConf *apiConfig) HandlerUpdateUser(w http.ResponseWriter, req *http.Req
 		respondWithError(w, http.StatusUnauthorized, "Token is expired")
 		return
 	}
+	issuer, err := token.Claims.GetIssuer()
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Invalid token")
+		return
+	}
+	if issuer == string(RefreshTokenIssuer) {
+		respondWithError(w, http.StatusUnauthorized, "Use refresh token to update user info")
+		return
+	}
 	id, err := token.Claims.GetSubject()
 
 	if err != nil {

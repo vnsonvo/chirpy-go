@@ -10,16 +10,23 @@ import (
 )
 
 type LoginUser struct {
-	ID    int    `json:"id"`
-	Email string `json:"email"`
-	Token string `json:"token"`
+	ID            int    `json:"id"`
+	Email         string `json:"email"`
+	Token         string `json:"token"`
+	Refresh_Token string `json:"refresh_token"`
 }
+
+type TokenType string
+
+const (
+	RefreshTokenIssuer TokenType = "chirpy-refresh"
+	AccessTokenIssuer  TokenType = "chirpy-acces"
+)
 
 func (apiConf *apiConfig) handlerLogin(w http.ResponseWriter, req *http.Request) {
 	type parameters struct {
-		Email            string `json:"email"`
-		Password         string `json:"password"`
-		ExpiresInSeconds int    `json:"expires_in_seconds"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
 	}
 
 	decoder := json.NewDecoder(req.Body)
@@ -36,28 +43,34 @@ func (apiConf *apiConfig) handlerLogin(w http.ResponseWriter, req *http.Request)
 		return
 	}
 
-	defaultExpiration := 60 * 60 * 24
-	if params.ExpiresInSeconds == 0 {
-		params.ExpiresInSeconds = defaultExpiration
-	} else if params.ExpiresInSeconds > defaultExpiration {
-		params.ExpiresInSeconds = defaultExpiration
-	}
-
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
-		Issuer:    "chirpy",
+		Issuer:    string(AccessTokenIssuer),
 		IssuedAt:  jwt.NewNumericDate(time.Now().UTC()),
-		ExpiresAt: jwt.NewNumericDate(time.Now().UTC().Add(time.Duration(params.ExpiresInSeconds) * time.Second)),
+		ExpiresAt: jwt.NewNumericDate(time.Now().UTC().Add(time.Hour)),
+		Subject:   strconv.Itoa(user.ID),
+	})
+
+	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
+		Issuer:    string(RefreshTokenIssuer),
+		IssuedAt:  jwt.NewNumericDate(time.Now().UTC()),
+		ExpiresAt: jwt.NewNumericDate(time.Now().UTC().Add(time.Hour * 24 * 60)),
 		Subject:   strconv.Itoa(user.ID),
 	})
 
 	signedToken, err := token.SignedString([]byte(apiConf.jwtSecret))
 	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "Couldn't sign token")
+		respondWithError(w, http.StatusUnauthorized, "Couldn't sign access token")
+	}
+
+	signedRefreshToken, err := refreshToken.SignedString([]byte(apiConf.jwtSecret))
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Couldnt sign refresh token")
 	}
 
 	respondWithJSON(w, http.StatusOK, LoginUser{
-		ID:    user.ID,
-		Email: user.Email,
-		Token: signedToken,
+		ID:            user.ID,
+		Email:         user.Email,
+		Token:         signedToken,
+		Refresh_Token: signedRefreshToken,
 	})
 }
