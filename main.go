@@ -14,6 +14,7 @@ type apiConfig struct {
 	fileServerHits int
 	DB             *database.DB
 	jwtSecret      string
+	polkaAPIKey    string
 }
 
 func main() {
@@ -23,6 +24,7 @@ func main() {
 	}
 
 	jwtSecret := os.Getenv("JWT_SECRET")
+	polkaAPIKey := os.Getenv("POLKA_API_KEY")
 
 	const filePathRoot = "."
 	const port = "8080"
@@ -33,8 +35,10 @@ func main() {
 	}
 
 	apiConf := apiConfig{fileServerHits: 0,
-		jwtSecret: jwtSecret,
-		DB:        db}
+		jwtSecret:   jwtSecret,
+		DB:          db,
+		polkaAPIKey: polkaAPIKey,
+	}
 	r := chi.NewRouter()
 
 	fsHandler := apiConf.middleWareMetricIncrement(http.StripPrefix("/app", http.FileServer(http.Dir(filePathRoot))))

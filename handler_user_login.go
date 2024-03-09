@@ -61,11 +61,13 @@ func (apiConf *apiConfig) handlerLogin(w http.ResponseWriter, req *http.Request)
 	signedToken, err := token.SignedString([]byte(apiConf.jwtSecret))
 	if err != nil {
 		respondWithError(w, http.StatusUnauthorized, "Couldn't sign access token")
+		return
 	}
 
 	signedRefreshToken, err := refreshToken.SignedString([]byte(apiConf.jwtSecret))
 	if err != nil {
 		respondWithError(w, http.StatusUnauthorized, "Couldnt sign refresh token")
+		return
 	}
 
 	respondWithJSON(w, http.StatusOK, LoginUser{

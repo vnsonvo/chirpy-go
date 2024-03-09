@@ -33,6 +33,7 @@ func (apiConf *apiConfig) handlerRefreshToken(w http.ResponseWriter, req *http.R
 	splitToken := strings.Split(reqToken, " ")
 	if len(splitToken) < 2 || splitToken[0] != "Bearer" {
 		respondWithError(w, http.StatusUnauthorized, "bad token")
+		return
 	}
 
 	reqToken = splitToken[1]
