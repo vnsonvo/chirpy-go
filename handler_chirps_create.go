@@ -4,12 +4,16 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 	"strings"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type Chirp struct {
-	ID   int    `json:"id"`
-	Body string `json:"body"`
+	ID       int    `json:"id"`
+	Body     string `json:"body"`
+	AuthorID int    `json:"author_id"`
 }
 
 func (apiConf *apiConfig) handlerChirp(w http.ResponseWriter, req *http.Request) {
@@ -31,17 +35,58 @@ func (apiConf *apiConfig) handlerChirp(w http.ResponseWriter, req *http.Request)
 		return
 	}
 
-	val := sanitizeFunc(params.Body)
+	reqToken := req.Header.Get("Authorization")
+	splitToken := strings.Split(reqToken, " ")
+	if len(splitToken) < 2 || splitToken[0] != "Bearer" {
+		respondWithError(w, http.StatusUnauthorized, "bad token")
+	}
 
-	chirp, err := apiConf.DB.CreateChirp(val)
+	reqToken = splitToken[1]
+
+	// parse token
+	claimsStruct := jwt.RegisteredClaims{}
+	token, err := jwt.ParseWithClaims(
+		reqToken,
+		&claimsStruct,
+		func(token *jwt.Token) (interface{}, error) { return []byte(apiConf.jwtSecret), nil },
+	)
+
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Token is expired")
+		return
+	}
+	issuer, err := token.Claims.GetIssuer()
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Invalid token")
+		return
+	}
+	if issuer == string(RefreshTokenIssuer) {
+		respondWithError(w, http.StatusUnauthorized, "Use refresh token to create chirp")
+		return
+	}
+	id, err := token.Claims.GetSubject()
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Invalid token")
+		return
+	}
+
+	val := sanitizeFunc(params.Body)
+	idVal, err := strconv.Atoi(id)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't create chirp")
+		return
+	}
+
+	chirp, err := apiConf.DB.CreateChirp(val, idVal)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't create chirp")
 		return
 	}
 
 	respondWithJSON(w, http.StatusCreated, Chirp{
-		ID:   chirp.ID,
-		Body: chirp.Body,
+		ID:       chirp.ID,
+		Body:     chirp.Body,
+		AuthorID: chirp.AuthorID,
 	})
 
 }
