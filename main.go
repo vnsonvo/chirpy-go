@@ -86,6 +86,7 @@ func apiRouter(apiConf *apiConfig) http.Handler {
 			r.Get("/", apiConf.handlerChirpsGet)
 			r.Delete("/", apiConf.handlerDeleteChirp)
 		})
+		r.Get("/{author_id}", apiConf.handlerChirpsRetrieve)
 	})
 
 	return r
